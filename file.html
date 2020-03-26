@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>LeanCloud WebRTC Demo</title>
+        <style>
+           
+            .visually-hidden {
+                position: absolute !important;
+                height: 1px;
+                width: 1px;
+                overflow: hidden;
+                clip: rect(1px, 1px, 1px, 1px);
+            }
+
+            /* Separate rule for compatibility, :focus-within is required on modern Firefox and Chrome */
+            input.visually-hidden:focus + label {
+                outline: thin dotted;
+            }
+            input.visually-hidden:focus-within + label {
+                outline: thin dotted;
+            }
+        </style>
+    </head>
+    <body>
+        <input type="file" id="fileElem" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
+        <a href="#" id="fileSelect">Select some files</a> 
+        <div id="fileList">
+        <p>No files selected!</p>
+        </div>
+    </body>
+</html>
+<script>
+    /*
+    //https://developer.mozilla.org/zh-CN/docs/Web/API/File/Using_files_from_web_applications#Example_Using_object_URLs_to_display_images
+    <input type="file" id="input" style="display:none" multiple onchange="handleFiles(this.files)">
+    <button id="fileSelect">Select some files</button>
+    const inputElement = document.getElementById("input");
+    inputElement.addEventListener("change", handleFiles, false);
+    function handleFiles() {
+        const fileList = this.files; 
+        for (let i = 0, numFiles = files.length; i < numFiles; i++) {
+            const file = files[i];
+            // ...
+        }
+    }
+    const fileSelect = document.getElementById("fileSelect"),
+    fileElem = document.getElementById("fileElem");
+
+    fileSelect.addEventListener("click", function (e) {
+        if (fileElem) {
+            fileElem.click();
+        }
+    }, false);
+
+    //使用拖放来选择文件
+    let dropbox;
+
+    dropbox = document.getElementById("dropbox");
+    dropbox.addEventListener("dragenter", dragenter, false);
+    dropbox.addEventListener("dragover", dragover, false);
+    dropbox.addEventListener("drop", drop, false);
+    function dragenter(e) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
+
+    function dragover(e) {
+        e.stopPropagation();
+        e.preventDefault();
+    } 
+    function drop(e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        var dt = e.dataTransfer;
+        var files = dt.files;
+
+        handleFiles(files);
+    }
+    //显示用户选择的图片的缩略图
+    function handleFiles(files) {
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            var imageType = /^image\//;
+            
+            if (!imageType.test(file.type)) {
+            continue;
+            }
+            
+            var img = document.createElement("img");
+            img.classList.add("obj");
+            img.file = file;
+            preview.appendChild(img); // 假设"preview"就是用来显示内容的div
+            
+            var reader = new FileReader();
+            reader.onload = (function(aImg) { return function(e) { aImg.src = e.target.result; }; })(img);
+            reader.readAsDataURL(file);
+        }
+    }
+    */
+window.URL = window.URL || window.webkitURL;
+
+var fileSelect = document.getElementById("fileSelect"),
+    fileElem = document.getElementById("fileElem"),
+    fileList = document.getElementById("fileList");
+
+fileSelect.addEventListener("click", function (e) {
+  if (fileElem) {
+    fileElem.click();
+  }
+  e.preventDefault(); // prevent navigation to "#"
+}, false);
+
+function handleFiles(files) {
+  if (!files.length) {
+    fileList.innerHTML = "<p>No files selected!</p>";
+  } else {
+    fileList.innerHTML = "";
+    var list = document.createElement("ul");
+    fileList.appendChild(list);
+    for (var i = 0; i < files.length; i++) {
+      var li = document.createElement("li");
+      list.appendChild(li);
+      
+      var img = document.createElement("img");
+      img.src = window.URL.createObjectURL(files[i]);
+      img.height = 60;
+      img.onload = function() {
+        window.URL.revokeObjectURL(this.src);
+      }
+      li.appendChild(img);
+      var info = document.createElement("span");
+      info.innerHTML = files[i].name + ": " + files[i].size + " bytes";
+      li.appendChild(info);
+    }
+  }
+}
+</script>

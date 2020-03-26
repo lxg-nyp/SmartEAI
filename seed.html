@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>LeanCloud WebRTC Demo</title>
+        
+        <style>
+            #remote_video {
+                position: fixed;
+                height: 100%;
+                width: 100%;
+                background: #111;
+                top: 0;
+                left: 0;
+            }
+
+            #local_video {
+                height: 20%;
+                max-width: 100%;
+                position: fixed;
+                top: 0;
+                right: 0;
+            }
+            #user{height: 22px;}
+            .fixedCenter{max-width:980px; height:70px; position:fixed; margin:0 auto; left:0; right:0; background:rgb(67,163,244);}
+            .marginCenter{ width:200px; height: 200px; position: absolute;left:0; top:0; right:0; bottom: 0; margin: auto; background: #f2056e;}
+            .translateCenter{ width: 40%; height: 20%; position: absolute; left:50%; top:50%; transform:translate(-50%,-50%); background: #2d2d2d;}
+            .absoluteCenter{ width:600px; height:100px;position:absolute; background: rgb(50,183,97); left:50%; top:50%; margin-left: -300px; margin-top: -50px;  }
+            #my input{width: 100px;height: 24px;margin-top: 40px;margin-left: 100px;}
+            #from{float: left;}
+        </style>
+    </head>
+    <body>
+        <div id="go">
+            <input id="user" type="text" placeholder="登录用户">
+            <input type="button" value="登录" onclick="login()">
+            <input id="target" type="text" placeholder="呼叫用户">
+            <input type="button" value="呼叫" onclick="call()">
+        </div>
+        <div id="my" class="absoluteCenter">
+            <div id="from">000</div>
+            <input type="button" value="接收" onclick="myaccept()">
+            <input type="button" value="拒绝" onclick="myrefuse()">
+        </div>
+        <video id="remote_video" autoplay></video>
+        <video id="local_video" autoplay muted></video>
+    </body>
+</html>
+
+<script src="js/realtime-browser.js"></script>
+<script src="js/webrtc.js"></script>
+<script>
+    //https://developer.mozilla.org/zh-CN/docs/Web/API/WebRTC_API
+    var APP_ID = '2dK8teH6V9RBvbY40cJl9kik-gzGzoHsz';
+    var APP_KEY = 'HvLKR7jLbq1O32GbzEy8OfFK';
+    var server = 'https://2dk8teh6.lc-cn-n1-shared.com';
+    var realtime = new AV.Realtime({
+    appId: APP_ID,
+    appKey: APP_KEY,
+    server: server,
+    plugins: AV.WebRTCPlugin
+    });
+    var remote_video=document.getElementById('remote_video');
+    var local_video=document.getElementById('local_video');
+    remote_video.style.display='none';
+    local_video.style.display='none';
+    my.style.display='none';
+    var rtc,incomingCall;
+    function login(){
+        var id=user.value;
+        realtime.createWebRTCClient(id).then(function ( WebRTCClient) {
+            rtc=WebRTCClient;
+            //收到其他用户的呼叫
+            rtc.on('call', function (IncomingCall) {  //呼入通话
+                incomingCall=IncomingCall;
+                from.innerHTML=incomingCall.from;
+                my.style.display='block';
+                go.style.display='none';
+                incomingCall.on('connect', function (stream) {
+                    remote_video.style.display='block';
+                    remote_video.srcObject = stream;
+                    //_this.remoteAudio = stream.getAudioTracks()[0];
+                });
+                
+                //呼叫被对方取消
+                incomingCall.on('cancel', function () {
+                    
+                });
+            });
+            //用户在其他客户端登录，当前客户端被服务端强行下线。
+            rtc.on('conflict', function () {
+                alert(rtc.id + ' logged in another device');
+            });
+        });
+    }
+    function call(){
+        //https://developer.mozilla.org/zh-CN/docs/Web/API/MediaDevices/getUserMedia
+        //https://developer.mozilla.org/zh-CN/docs/Web/API/MediaDevices/getDisplayMedia
+        var localStream=getLocalStream();
+        localStream.then(function(mediaStream) {
+            local_video.style.display='block';
+            local_video.srcObject = mediaStream;
+            localStream=mediaStream;
+        //getLocalStream().then(function(localStream){
+            /*
+            video.onloadedmetadata = function(e) {
+                video.play();
+            };
+            */
+            var targetId=target.value;
+            rtc.call(targetId, localStream).then(function (outgoingCall) { //呼出通话
+                //通话连接成功
+                outgoingCall.on('connect', function (remoteStream) {
+                    remote_video.style.display='block';
+                    remote_video.srcObject = remoteStream;
+                    //_this.remoteAudio = remoteStream.getAudioTracks()[0];
+                    //_this.state = 'connected';
+                });
+                //呼叫被对方拒绝
+                outgoingCall.on('refuse', function () {
+                    alert(_this.targetId + ' refused the call');
+                    //_this.reset();
+                });
+                //通话结束，可能是对方挂断或网络中断
+            })
+            .catch(function (error) {
+                //_this.reset();
+                return alert(error.message);
+            });
+        })
+        .catch(function(err) { console.log(err.name + ": " + err.message); }); // 总是在最后检查错误
+        
+    }
+    function getLocalStream() {
+        var constraints={audio: true, video:true};
+        var localStream=navigator.mediaDevices.getUserMedia(constraints);
+        localStream.then(function(mediaStream) {
+            local_video.style.display='block';
+            local_video.srcObject = mediaStream;
+        })
+        .catch(function(err) { console.log(err.name + ": " + err.message); }); // 总是在最后检查错误
+        return localStream;
+    }
+    function myaccept(){
+        //接受该呼入通话
+        var localStream=getLocalStream();
+        localStream.then(function(mediaStream) {
+            local_video.style.display='block';
+            local_video.srcObject = mediaStream;
+            localStream=mediaStream;
+
+            incomingCall.accept(localStream);
+        })
+        .catch(function(err) { console.log(err.name + ": " + err.message); }); // 总是在最后检查错误
+    }
+    function myrefuse(){
+        incomingCall.refuse().then(function () {
+            incomingCall = null;
+        }).catch(console.error.bind(console));
+    }
+    function hangup(){
+        if(incomingCall){
+            incomingCall.close();
+        }
+        reset();
+    }
+    function reset(){
+        if (local_Video.srcObject) {
+            local_Video.srcObject.getTracks().forEach(function (track) {
+                return track.stop();
+            });
+        }
+    }
+</script>

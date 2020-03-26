@@ -1,0 +1,1 @@
+var remote_video=document.getElementById('remote_video');
